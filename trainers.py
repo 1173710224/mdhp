@@ -27,9 +27,10 @@ class Trainer():
         pass
 
     def train(self):
-        self.optimizier = torch.optim.Adam(
-            self.model.parameters(), lr=0.001)
-        self.loss_sequence = []
+        self.optimizier = torch.optim.SGD(
+            self.model.parameters(), momentum=0.9)
+        self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
+                                                           milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
         self.model.train()
         for i in range(self.epoch):
             loss_sum = 0
@@ -47,9 +48,8 @@ class Trainer():
                 loss.backward()
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
+            self.lr_sch.step()
             avg_loss = loss_sum * 1.0/self.num_image
-            self.loss_sequence.append(avg_loss)
-            print(f"Epoch~{i+1}->{avg_loss},{round(time.time()-start, 2)}s")
             print("Epoch~{}->train_loss:{},val_accu:{},time:{}s".format(i+1, round(avg_loss, 4),
                   self.val(), round(time.time() - start, 4)))
         return
