@@ -105,6 +105,23 @@ NAME2BATCHSIZE = {
     SVHN: 64,
 }
 
+B1 = "b1"
+B2 = "b2"
+B3 = "b3"
+B4 = "b4"
+C1 = "c1"
+C2 = "c2"
+C3 = "c3"
+C4 = "c4"
+ITERATIONS = 50
+INF = 100000000000
+BAYES = "bayes"
+ZOOPT = "zoopt"
+RAND = "rand"
+GENETICA = "ga"
+PARTICLESO = "pso"
+HYPERBAND = "hyperband"
+
 # mode
 MINI = "mini"
 
