@@ -5,88 +5,144 @@ from torch.nn.parameter import Parameter
 from const import *
 from utils import Data
 import torch
+from random import random
+from math import log, ceil
+import numpy as np
 
 
-class Block(nn.Module):
-    '''expand + depthwise + pointwise'''
+class Hyperband:
 
-    def __init__(self, in_planes, out_planes, expansion, stride):
-        super(Block, self).__init__()
-        self.stride = stride
+    def __init__(self, get_params_function, try_params_function, it_n):
+        self.get_params = get_params_function
+        self.try_params = try_params_function
+        self.max_iter = it_n  	# maximum iterations per configuration
+        self.eta = 3			# defines configuration downsampling rate (default = 3)
 
-        planes = expansion * in_planes
+        self.logeta = lambda x: log(x) / log(self.eta)
+        self.s_max = int(self.logeta(self.max_iter))
+        self.B = (self.s_max + 1) * self.max_iter
+
+        self.results = {}
+        self.results["best_loss"] = INF
+        self.results["best_hparams"] = 0
+        self.best_loss = INF
+        self.counter = 0
+        self.best_counter = -1
+
+    # can be called multiple times
+    def run(self, skip_last=0, dry_run=False):
+        # num = 0
+        for s in reversed(range(self.s_max + 1)):
+
+            # initial number of configurations
+            n = int(ceil(self.B / self.max_iter / (s + 1) * self.eta ** s))
+            # n=30
+            # initial number of iterations per config
+            r = self.max_iter * self.eta ** (-s)
+
+            # n random configurations
+            T = [self.get_params() for i in range(n)]
+
+            for i in range((s + 1) - int(skip_last)):  # changed from s + 1
+
+                # Run each of the n configs for <iterations>
+                # and keep best (n_configs / eta) configurations
+                n_configs = n * self.eta ** (-i)
+                n_iterations = r * self.eta ** (i)
+
+                val_losses = []
+                for t in T:
+                    self.counter += 1
+                    if dry_run:
+                        result = {'loss': random()}
+                    else:
+                        result = self.try_params(n_iterations, t)
+                    if result['accu'] >= INF:
+                        continue
+
+                    loss = result['loss']
+                    if loss < self.best_loss:
+                        self.best_loss = loss
+                        self.best_counter = self.counter
+                        self.results["best_loss"] = loss
+                        self.results["best_hparams"] = t
+                indices = np.argsort(val_losses)
+                T = [T[i] for i in indices]
+                T = T[0:int(n_configs / self.eta)]
+        return self.results
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(
-            in_planes, planes, kernel_size=1, stride=1, padding=0, bias=False)
+            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=stride, padding=1, groups=planes, bias=False)
+                               stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(
-            planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3 = nn.BatchNorm2d(out_planes)
 
         self.shortcut = nn.Sequential()
-        if stride == 1 and in_planes != out_planes:
+        if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, out_planes, kernel_size=1,
-                          stride=1, padding=0, bias=False),
-                nn.BatchNorm2d(out_planes),
+                nn.Conv2d(in_planes, self.expansion*planes,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
             )
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        out = F.relu(self.bn2(self.conv2(out)))
-        out = self.bn3(self.conv3(out))
-        out = out + self.shortcut(x) if self.stride == 1 else out
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
         return out
 
 
-class MobileNetV2(nn.Module):
-    # (expansion, out_planes, num_blocks, stride)
-    cfg = [(1,  16, 1, 1),
-           (6,  24, 2, 1),  # NOTE: change stride 2 -> 1 for CIFAR10
-           (6,  32, 3, 2),
-           (6,  64, 4, 2),
-           (6,  96, 3, 1),
-           (6, 160, 3, 2),
-           (6, 320, 1, 1)]
-
-    def __init__(self, num_classes=10):
-        super(MobileNetV2, self).__init__()
-        # NOTE: change conv1 stride 2 -> 1 for CIFAR10
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3,
+class ResNet(nn.Module):
+    def __init__(self, input_channel, ndim, num_classes, block=BasicBlock, num_blocks=[2, 2, 2, 2], hparams=[64, 128, 256, 512, 2, 2, 2, 2]):
+        super(ResNet, self).__init__()
+        self.in_planes = hparams[0]
+        self.conv1 = nn.Conv2d(input_channel, hparams[0], kernel_size=3,
                                stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.layers = self._make_layers(in_planes=32)
-        self.conv2 = nn.Conv2d(320, 1280, kernel_size=1,
-                               stride=1, padding=0, bias=False)
-        self.bn2 = nn.BatchNorm2d(1280)
-        self.linear = nn.Linear(1280, num_classes)
+        self.bn1 = nn.BatchNorm2d(hparams[0])
+        self.layer1 = self._make_layer(
+            block, hparams[0], hparams[4], stride=1)
+        self.layer2 = self._make_layer(
+            block, hparams[1], hparams[5], stride=2)
+        self.layer3 = self._make_layer(
+            block, hparams[2], hparams[6], stride=2)
+        self.layer4 = self._make_layer(
+            block, hparams[3], hparams[7], stride=2)
+        self.linear = nn.Linear(hparams[3]*block.expansion, num_classes)
 
-    def _make_layers(self, in_planes):
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
         layers = []
-        for expansion, out_planes, num_blocks, stride in self.cfg:
-            strides = [stride] + [1]*(num_blocks-1)
-            for stride in strides:
-                layers.append(Block(in_planes, out_planes, expansion, stride))
-                in_planes = out_planes
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        out = self.layers(out)
-        out = F.relu(self.bn2(self.conv2(out)))
-        # NOTE: change pooling kernel_size 7 -> 4 for CIFAR10
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
 
+    def reset_parameters(self):
+        return
+
 
 def test():
-    net = MobileNetV2()
-    x = torch.randn(2, 3, 32, 32)
-    y = net(x)
+    net = ResNet(3, 32, 10, hparams=[64, 128, 256, 512, 2, 3, 2, 2])
+    y = net(torch.randn(2, 3, 32, 32))
     print(y.size())
 
 
