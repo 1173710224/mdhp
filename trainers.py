@@ -28,9 +28,13 @@ class Trainer():
 
     def train(self):
         self.optimizier = torch.optim.SGD(
-            self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
-        self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
-                                                           milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
+            self.model.parameters(), lr=0.05, momentum=P_MOMENTUM, weight_decay=0.0005)
+        # self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
+        #    milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
+        # self.lr_sch = torch.optim.lr_scheduler.CosineAnnealingLR(
+        #     self.optimizier, T_max=200)
+        # self.optimizier = torch.optim.Adam(
+        #     self.model.parameters(), lr=0.001)
         self.model.train()
         for i in range(self.epoch):
             loss_sum = 0
@@ -46,9 +50,10 @@ class Trainer():
                 loss = F.cross_entropy(preds, label)
                 self.optimizier.zero_grad()
                 loss.backward()
+                print(loss.item())
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
-            self.lr_sch.step()
+            # self.lr_sch.step()
             avg_loss = loss_sum * 1.0/self.num_image
             print("Epoch~{}->train_loss:{},val_accu:{},time:{}s".format(i+1, round(avg_loss, 4),
                   self.val(), round(time.time() - start, 4)))
