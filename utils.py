@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import torch
 import pickle
-from optim import DiffSelfAdaptDagger, DiffSelfAdaptDotplus, FDecreaseDsa, HypergraDient, DiffSelfAdapt, MomentumDiffSelfAdapt
 
 
 class Data():
