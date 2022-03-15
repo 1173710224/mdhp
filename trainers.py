@@ -51,7 +51,7 @@ class Trainer():
             self.loss_sequence.append(avg_loss)
             print(f"Epoch~{i+1}->{avg_loss},{round(time.time()-start, 2)}s")
             print("Epoch~{}->train_loss:{},val_accu:{},time:{}s".format(i+1, round(avg_loss, 4),
-                  self.val(), round(time() - start, 4)))
+                  self.val(), round(time.time() - start, 4)))
         return
 
     def val(self):
