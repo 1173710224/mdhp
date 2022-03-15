@@ -13,8 +13,6 @@ class CnnExp():
         pass
 
     def debug(self, dataset=MNIST, opt=ADAM):
-        train_loader, test_loader, input_channel, ndim, nclass = self.data.get(
-            dataset)
         trainer = Trainer()
         trainer.train()
         # trainer.save_metrics(f"result/big/fmp_{dataset}_{opt}")
