@@ -28,7 +28,7 @@ class Trainer():
 
     def train(self):
         self.optimizier = torch.optim.SGD(
-            self.model.parameters(), momentum=0.9)
+            self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
         self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
                                                            milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
         self.model.train()
