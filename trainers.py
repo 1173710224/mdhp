@@ -4,6 +4,7 @@ import torch
 from const import *
 import torch.nn.functional as F
 import warnings
+import time
 warnings.filterwarnings("ignore")
 
 
@@ -32,6 +33,7 @@ class Trainer():
         self.model.train()
         for i in range(self.epoch):
             loss_sum = 0
+            start = time.time()
             for imgs, label in self.train_loader:
                 if torch.cuda.is_available():
                     imgs = imgs.cuda()
@@ -47,7 +49,9 @@ class Trainer():
                 loss_sum += loss.item() * len(imgs)
             avg_loss = loss_sum * 1.0/self.num_image
             self.loss_sequence.append(avg_loss)
-            print("Epoch~{}->{}".format(i+1, avg_loss))
+            print(f"Epoch~{i+1}->{avg_loss},{round(time.time()-start, 2)}s")
+            print("Epoch~{}->train_loss:{},val_accu:{},time:{}s".format(i+1, round(avg_loss, 4),
+                  self.val(), round(time() - start, 4)))
         return
 
     def val(self):
