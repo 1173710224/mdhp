@@ -13,6 +13,7 @@ from sko.GA import GA
 from sko.PSO import PSO
 from hyperopt import hp
 from hyperopt.pyll.stochastic import sample
+import numpy as np
 warnings.filterwarnings("ignore")
 
 
@@ -104,7 +105,8 @@ class Trainer():
         self.optimizier = torch.optim.SGD(
             self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
         self.model.train()
-        for _ in range(iter):
+        ret = 0
+        for i in range(iter):
             loss_sum = 0
             for imgs, label in self.train_loader:
                 if torch.cuda.is_available():
@@ -119,7 +121,10 @@ class Trainer():
                 loss.backward()
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
-        return loss_sum * 1.0/self.num_image
+            ret = loss_sum * 1.0/self.num_image
+            if (i + 1) % 5 == 0:
+                print(f"Epoch~{i + 1}->loss:{ret}.")
+        return ret
 
     def bayes(self):
         def max_obj(c1, c2, c3, c4, b1, b2, b3, b4):
@@ -141,7 +146,9 @@ class Trainer():
         st = time.perf_counter()
         optimizer.maximize(init_points=5, n_iter=ITERATIONS-5)
         with open(f"hparams/{self.dataset}_{BAYES}.json", "w") as f:
-            json.dump(optimizer.max, f)
+            json.dump([int(optimizer.max['params'][tmp])
+                      for tmp in HPORDER], f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, optimizer.max["params"], -optimizer.max["target"]
 
     def zoopt(self):
@@ -166,13 +173,14 @@ class Trainer():
         )), Parameter(budget=ITERATIONS))
         with open(f"hparams/{self.dataset}_{ZOOPT}.json", "w") as f:
             json.dump(solution.get_x(), f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, solution.get_x(), solution.get_value()
 
     def rand(self):
         best_hparams = None
-        best_loss = 0
+        best_loss = INF
         st = time.perf_counter()
-        for _ in range(ITERATIONS):
+        for _ in range():
             hparams = [
                 randint(32, 64),
                 randint(64, 128),
@@ -190,6 +198,7 @@ class Trainer():
                 best_hparams = hparams
         with open(f"hparams/{self.dataset}_{RAND}.json", "w") as f:
             json.dump(best_hparams, f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
 
     def ga(self):
@@ -203,7 +212,8 @@ class Trainer():
         st = time.perf_counter()
         best_params, best_loss = ga.run()
         with open(f"hparams/{self.dataset}_{GENETICA}.json", "w") as f:
-            json.dump(best_params, f)
+            json.dump([int(tmp) for tmp in best_params], f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_params, best_loss
 
     def pso(self):
@@ -217,7 +227,8 @@ class Trainer():
         st = time.perf_counter()
         best_params, best_loss = ga.run()
         with open(f"hparams/{self.dataset}_{PARTICLESO}.json", "w") as f:
-            json.dump(best_params, f)
+            json.dump([int(tmp) for tmp in best_params], f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_params, best_loss
 
     def hyper_band(self):
@@ -232,21 +243,22 @@ class Trainer():
                 B3: hp.choice(B3, [i for i in range(2, 6+1)]),
                 B4: hp.choice(B4, [i for i in range(2, 3+1)]),
             })
-            return hparams
+            return [int(hparams[tmp]) for tmp in HPORDER]
 
         def try_params_conv(hparams, iter):
             self.reset_model(hparams)
-            loss = self.objective(iter)
+            loss = self.objective()
             result = {}
             result['loss'] = loss
             return result
-        hb = Hyperband(get_params_conv, try_params_conv, self.dataset)
+        hb = Hyperband(get_params_conv, try_params_conv, it_n=ITERATIONS)
         st = time.perf_counter()
         results = hb.run()
         best_loss = results["best_loss"]
         best_hparams = results["best_hparams"]
         with open(f"hparams/{self.dataset}_{HYPERBAND}.json", "w") as f:
             json.dump(best_hparams, f)
+        print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
 
 

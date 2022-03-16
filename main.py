@@ -33,12 +33,15 @@ class CnnExp():
         trainer.ga()
         print("pso")
         trainer.pso()
-        print("hd")
+        print("hb")
         trainer.hyper_band()
         return
 
 
 if __name__ == "__main__":
     exp = CnnExp()
-    exp.cal_hparams()
+    exp.cal_hparams(MNIST)
+    exp.cal_hparams(SVHN)
+    exp.cal_hparams(CIFAR10)
+    exp.cal_hparams(CIFAR100)
     pass

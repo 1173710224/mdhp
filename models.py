@@ -50,23 +50,24 @@ class Hyperband:
                 n_configs = n * self.eta ** (-i)
                 n_iterations = r * self.eta ** (i)
 
-                val_losses = []
+                losses = []
                 for t in T:
                     self.counter += 1
                     if dry_run:
                         result = {'loss': random()}
                     else:
-                        result = self.try_params(n_iterations, t)
-                    if result['accu'] >= INF:
+                        result = self.try_params(t, n_iterations)
+                    if result['loss'] >= INF:
                         continue
 
                     loss = result['loss']
+                    losses.append(loss)
                     if loss < self.best_loss:
                         self.best_loss = loss
                         self.best_counter = self.counter
                         self.results["best_loss"] = loss
                         self.results["best_hparams"] = t
-                indices = np.argsort(val_losses)
+                indices = np.argsort(losses)
                 T = [T[i] for i in indices]
                 T = T[0:int(n_configs / self.eta)]
         return self.results
