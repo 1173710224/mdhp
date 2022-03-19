@@ -1,66 +1,85 @@
-from torch.utils.data import dataset
+import torch
+import torchvision
+from torch import nn
+from torch.autograd import Variable
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from torchvision.utils import save_image
+from torchvision.datasets import MNIST
+import os
 from utils import Data
-from const import *
-import numpy as np
+import torch.nn.functional as F
+
+if not os.path.exists('./dc_img'):
+    os.mkdir('./dc_img')
 
 
-class Encoder():
-    def __init__(self, dataset) -> None:
-        self.dataset = dataset
-        self.encode = None
-        self.data_loader = Data()
-        pass
-
-    def get_encode(self):
-        return self.encode
+def to_img(x):
+    x = 0.5 * (x + 1)
+    x = x.clamp(0, 1)
+    x = x.view(x.size(0), 1, 28, 28)
+    return x
 
 
-class StatisticEncoder(Encoder):
-    def __init__(self, dataset) -> None:
-        super().__init__(dataset)
-        return
+num_epochs = 100
+batch_size = 128
+learning_rate = 1e-3
 
-    def generate_encode(self):
-        '''
-        计算每个类别x每个特征的（最大值、最小值、中位数、平均数）
-        '''
-        encode = []
-        classified_samples = {}
-        if self.dataset in SMALL:
-            train_data, _, _, _ = self.data_loader.get(self.dataset)
-            x_train, y_train = train_data
-            x_train = x_train.cpu().numpy()
-            y_train = y_train.cpu().numpy()
-            for index in range(len(y_train)):
-                if not classified_samples.__contains__(y_train[index]):
-                    classified_samples[y_train[index]] = [x_train[index]]
-                else:
-                    classified_samples[y_train[index]].append(x_train[index])
-            print(classified_samples.keys())  # , classified_samples.values())
-            for iter_class in classified_samples.keys():
-                samples = classified_samples[iter_class]
-                samples = np.array(samples)
-                if len(samples) == 0:
-                    continue
-                for index in range(len(samples[0])):
-                    encode.append(np.max(samples[:, index]))
-                    encode.append(np.min(samples[:, index]))
-                    encode.append(np.mean(samples[:, index]))
-                    encode.append(np.median(samples[:, index]))
-            self.encode = encode
-        elif self.dataset in BIG:
-            pass
-        return
+# img_transform = transforms.Compose([
+#     transforms.ToTensor(),
+#     transforms.Normalize((0.5), (0.5))
+# ])
 
-    def aggregate_samples(self):
-        classified_samples = {}
-        for index in range():
-            pass
-        return
+# dataset = MNIST('./data', transform=img_transform)
+# dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+
+class AutoEncoder(nn.Module):
+    def __init__(self, input_channel, ndim):
+        super(AutoEncoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channel, 16, 3, stride=3,
+                      padding=1),  # b, 16, 10, 10
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),  # b, 16, 5, 5
+            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # b, 8, 3, 3
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=1)  # b, 8, 2, 2
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(8, 16, 3, stride=2),  # b, 16, 5, 5
+            nn.ReLU(True),
+            nn.ConvTranspose2d(16, 8, 5, stride=3,
+                               padding=1-int(ndim/32)),  # b, 8, 15, 15
+            nn.ReLU(True),
+            nn.ConvTranspose2d(8, input_channel, 2, stride=2,
+                               padding=1),  # b, 1, 28, 28
+            nn.Tanh()
+        )
+        self.flatten = torch.nn.Flatten()
+
+    def forward(self, x):
+        x = self.encoder(x)
+        print(x.size())
+        x = self.decoder(x)
+        return x
+
+    def embedding(self, x):
+        x = self.encoder(x)
+        x = self.flatten(x)
+        return x
 
 
 if __name__ == "__main__":
-    encoder = StatisticEncoder(WINE)
-    encoder.generate_encode()
-    print(encoder.encode)
+    data = Data()
+    # loader, _, input_channel, _, _ = data.load_svhn()
+    loader, _, input_channel, ndim, _ = data.load_mnist()
+    # loader, _, input_channel, _, _ = data.load_cifar10()
+    model = AutoEncoder(input_channel, ndim)
+    for imgs, label in loader:
+        output = model(imgs)
+        # print(output.size(), imgs.size())
+        # loss = F.mse_loss(output, imgs)
+        print(model.embedding(imgs).size())
+        break
     pass

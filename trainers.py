@@ -1,6 +1,6 @@
 import json
-from models import ResNet, Hyperband
-from utils import Data, num_image
+from models import ResNet, Hyperband, AutoEncoder
+from utils import Data, num_image, Sampler
 import torch
 from const import *
 import torch.nn.functional as F
@@ -261,7 +261,97 @@ class Trainer():
         print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
 
+    def embedding_dataset(self, dataloader):
+        encoder = AutoEncoder(self.input_channel, self.ndim)
+        if torch.cuda.is_available():
+            encoder.cuda()
+        optimizer = torch.optim.Adam(encoder.parameters(), weight_decay=1e-5)
+        encoder.train()
+        for _ in range(100):
+            for data in dataloader:
+                img, _ = data
+                if torch.cuda.is_available():
+                    img.cuda()
+                output = encoder(img)
+                loss = F.mse_loss(output, img)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+        embeddings = []
+        for data in dataloader:
+            img, _ = data
+            if torch.cuda.is_available():
+                img.cuda()
+            embeddings.append(encoder.embedding(img))
+        embedding = torch.cat(embeddings, dim=0).mean(dim=0)
+        return embedding.detach().cpu().numpy()
+
+    def optimal_hparams(self, dataloader):
+        def objective(iter=10):
+            optimizer = torch.optim.SGD(
+                self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
+            self.model.train()
+            ret = 0
+            for i in range(iter):
+                loss_sum = 0
+                for imgs, label in dataloader:
+                    if torch.cuda.is_available():
+                        imgs = imgs.cuda()
+                        label = label.cuda()
+                    preds = self.model(imgs)
+                    loss = F.cross_entropy(preds, label)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    loss_sum += loss.item() * len(imgs)
+                ret = loss_sum
+                if (i + 1) % 5 == 0:
+                    print(f"Epoch~{i + 1}->loss:{ret}.")
+            return ret
+
+        def max_obj(c1, c2, c3, c4, b1, b2, b3, b4):
+            hparams = [int(c1), int(c2), int(c3), int(
+                c4), int(b1), int(b2), int(b3), int(b4)]
+            self.reset_model(hparams)
+            return -objective()
+        self.loss_set = []
+        optimizer = BayesianOptimization(max_obj, {
+            C1: (32, 64+0.99),
+            C2: (64, 128+0.99),
+            C3: (128, 256+0.99),
+            C4: (256, 512+0.99),
+            B1: (2, 3+0.99),
+            B2: (2, 4+0.99),
+            B3: (2, 6+0.99),
+            B4: (2, 3+0.99),
+        })
+        st = time.perf_counter()
+        optimizer.maximize(init_points=5, n_iter=45)
+        print(f"time: {time.perf_counter() - st}")
+        return [int(optimizer.max['params'][tmp]) for tmp in HPORDER]
+
+    def generate_training_sample(self, num_sample=1000, dataset_size=500):
+        x = []
+        y = []
+        sampler = Sampler(self.dataset)
+        for i in num_sample:
+            loader, _, _, _ = sampler.fetch()
+            embedding = self.embedding_dataset(loader)
+            hparams = self.optimal_hparams(loader)
+            x.append(embedding)
+            y.append(hparams)
+        torch.save((x, y))
+        return
+
 
 if __name__ == "__main__":
-
+    trainer = Trainer(MNIST)
+    sampler = Sampler(trainer.dataset)
+    loader, _, _, _ = sampler.fetch()
+    embedding = trainer.embedding_dataset(loader)
+    torch.save(([embedding, embedding], [[1, 2], [1, 2]]),
+               f"mehp/{trainer.dataset}")
+    # with open(f"mehp/{trainer.dataset}.pkl", "w") as f:
+    #     import pickle as pkl
+    #     pkl.dump(embedding, f)
     pass
