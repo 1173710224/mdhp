@@ -253,7 +253,7 @@ class Trainer():
             result = {}
             result['loss'] = loss
             return result
-        hb = Hyperband(get_params_conv, try_params_conv, it_n=ITERATIONS)
+        hb = Hyperband(get_params_conv, try_params_conv, it_n=9)
         st = time.perf_counter()
         results = hb.run()
         best_loss = results["best_loss"]
