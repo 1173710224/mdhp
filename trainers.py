@@ -41,9 +41,9 @@ class Trainer():
 
     def train(self, tag=""):
         self.optimizier = torch.optim.SGD(
-            self.model.parameters(), lr=0.05, momentum=P_MOMENTUM, weight_decay=0.0005)
-        # self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
-        #    milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
+            self.model.parameters(), lr=0.05, momentum=P_MOMENTUM, weight_decay=0.0001)
+        self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
+                                                           milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
         # self.lr_sch = torch.optim.lr_scheduler.CosineAnnealingLR(
         #     self.optimizier, T_max=200)
         # self.optimizier = torch.optim.Adam(
@@ -67,7 +67,7 @@ class Trainer():
                 print(loss.item())
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
-            # self.lr_sch.step()
+            self.lr_sch.step()
             avg_loss = loss_sum * 1.0/self.num_image
             losses.append(losses)
             print("Epoch~{}->train_loss:{},time:{}s".format(i+1,
