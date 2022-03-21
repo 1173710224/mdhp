@@ -208,7 +208,7 @@ def get_scheduler(opt, optimizer):
 class MehpDataset(Dataset):
     def __init__(self, dataset=MNIST):
         super(MehpDataset, self).__init__()
-        data = torch.load(f"mehp/{dataset}")
+        data = torch.load(f"mehp/{dataset}_data")
         x, y = data
         x = np.array(x)
         x = torch.Tensor(x)

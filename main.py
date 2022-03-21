@@ -42,11 +42,6 @@ class CnnExp():
         trainer.generate_training_sample()
         return
 
-    def generate_sample_for_mehp(self, dataset):
-        trainer = Trainer(dataset)
-        trainer.generate_training_sample()
-        return
-
     def train_mehp(self, dataset):
         trainer = Trainer(dataset)
         trainer.train_mapper()
@@ -67,8 +62,10 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
-    exp.cal_hparams(MNIST)
-    exp.cal_hparams(SVHN)
-    exp.cal_hparams(CIFAR10)
-    exp.cal_hparams(CIFAR100)
+    # # calculate h-parameters of baselines
+    # exp.cal_hparams(MNIST)
+    # exp.cal_hparams(SVHN)
+    # exp.cal_hparams(CIFAR10)
+    # exp.cal_hparams(CIFAR100)
+    exp.generate_sample_for_mehp(MNIST)
     pass

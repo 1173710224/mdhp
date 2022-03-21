@@ -273,7 +273,7 @@ class Trainer():
             for data in dataloader:
                 img, _ = data
                 if torch.cuda.is_available():
-                    img.cuda()
+                    img = img.cuda()
                 output = encoder(img)
                 loss = F.mse_loss(output, img)
                 optimizer.zero_grad()
@@ -283,7 +283,7 @@ class Trainer():
         for data in dataloader:
             img, _ = data
             if torch.cuda.is_available():
-                img.cuda()
+                img = img.cuda()
             embeddings.append(encoder.embedding(img))
         embedding = torch.cat(embeddings, dim=0).mean(dim=0)
         return embedding.detach().cpu().numpy()
@@ -328,7 +328,7 @@ class Trainer():
             B4: (2, 3+0.99),
         })
         st = time.perf_counter()
-        optimizer.maximize(init_points=5, n_iter=INFITER)
+        optimizer.maximize(init_points=5, n_iter=INFITER-5)
         print(f"time: {time.perf_counter() - st}")
         return [int(optimizer.max['params'][tmp]) for tmp in HPORDER]
 
@@ -336,13 +336,17 @@ class Trainer():
         x = []
         y = []
         sampler = Sampler(self.dataset)
-        for i in num_sample:
+        for i in range(num_sample):
             loader, _, _, _ = sampler.fetch(dataset_size)
-            embedding = self.embedding_dataset(loader)
+            # embedding = self.embedding_dataset(loader)
+            st = time.perf_counter()
             hparams = self.optimal_hparams(loader)
+            print(time.perf_counter()-st)
+            break
             x.append(embedding)
             y.append(hparams)
-        torch.save((x, y), f"mehp/{self.dataset}")
+            print(f'{i}th->embedding:{embedding},hparams:{hparams}')
+        torch.save((x, y), f"mehp/{self.dataset}_data")
         return
 
     def train_mapper(self,):
