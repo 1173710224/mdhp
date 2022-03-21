@@ -42,11 +42,6 @@ class CnnExp():
         trainer.generate_training_sample()
         return
 
-    def generate_sample_for_mehp(self, dataset):
-        trainer = Trainer(dataset)
-        trainer.generate_training_sample()
-        return
-
     def train_mehp(self, dataset):
         trainer = Trainer(dataset)
         trainer.train_mapper()
