@@ -1,6 +1,8 @@
 import json
-from models import ResNet, Hyperband
-from utils import Data, num_image
+from pickletools import optimize
+from models import ResNet, Hyperband, AutoEncoder, Mapper
+from utils import Data, num_image, Sampler, MehpDataset
+from torch.utils.data import DataLoader
 import torch
 from const import *
 import torch.nn.functional as F
@@ -251,7 +253,7 @@ class Trainer():
             result = {}
             result['loss'] = loss
             return result
-        hb = Hyperband(get_params_conv, try_params_conv, it_n=ITERATIONS)
+        hb = Hyperband(get_params_conv, try_params_conv, it_n=9)
         st = time.perf_counter()
         results = hb.run()
         best_loss = results["best_loss"]
@@ -261,7 +263,140 @@ class Trainer():
         print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
 
+    def embedding_dataset(self, dataloader):
+        encoder = AutoEncoder(self.input_channel, self.ndim)
+        if torch.cuda.is_available():
+            encoder.cuda()
+        optimizer = torch.optim.Adam(encoder.parameters(), weight_decay=1e-5)
+        encoder.train()
+        for _ in range(EMBEDDINGEPOCH):
+            for data in dataloader:
+                img, _ = data
+                if torch.cuda.is_available():
+                    img.cuda()
+                output = encoder(img)
+                loss = F.mse_loss(output, img)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+        embeddings = []
+        for data in dataloader:
+            img, _ = data
+            if torch.cuda.is_available():
+                img.cuda()
+            embeddings.append(encoder.embedding(img))
+        embedding = torch.cat(embeddings, dim=0).mean(dim=0)
+        return embedding.detach().cpu().numpy()
+
+    def optimal_hparams(self, dataloader):
+        def objective(iter=INFEPOCH):
+            optimizer = torch.optim.SGD(
+                self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
+            self.model.train()
+            ret = 0
+            for i in range(iter):
+                loss_sum = 0
+                for imgs, label in dataloader:
+                    if torch.cuda.is_available():
+                        imgs = imgs.cuda()
+                        label = label.cuda()
+                    preds = self.model(imgs)
+                    loss = F.cross_entropy(preds, label)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    loss_sum += loss.item() * len(imgs)
+                ret = loss_sum
+                if (i + 1) % 5 == 0:
+                    print(f"Epoch~{i + 1}->loss:{ret}.")
+            return ret
+
+        def max_obj(c1, c2, c3, c4, b1, b2, b3, b4):
+            hparams = [int(c1), int(c2), int(c3), int(
+                c4), int(b1), int(b2), int(b3), int(b4)]
+            self.reset_model(hparams)
+            return -objective()
+        self.loss_set = []
+        optimizer = BayesianOptimization(max_obj, {
+            C1: (32, 64+0.99),
+            C2: (64, 128+0.99),
+            C3: (128, 256+0.99),
+            C4: (256, 512+0.99),
+            B1: (2, 3+0.99),
+            B2: (2, 4+0.99),
+            B3: (2, 6+0.99),
+            B4: (2, 3+0.99),
+        })
+        st = time.perf_counter()
+        optimizer.maximize(init_points=5, n_iter=INFITER)
+        print(f"time: {time.perf_counter() - st}")
+        return [int(optimizer.max['params'][tmp]) for tmp in HPORDER]
+
+    def generate_training_sample(self, num_sample=1000, dataset_size=500):
+        x = []
+        y = []
+        sampler = Sampler(self.dataset)
+        for i in num_sample:
+            loader, _, _, _ = sampler.fetch(dataset_size)
+            embedding = self.embedding_dataset(loader)
+            hparams = self.optimal_hparams(loader)
+            x.append(embedding)
+            y.append(hparams)
+        torch.save((x, y), f"mehp/{self.dataset}")
+        return
+
+    def train_mapper(self,):
+        train_dataset = MehpDataset(self.dataset)
+        train_loader = DataLoader(
+            dataset=train_dataset, batch_size=128, shuffle=True,)
+        mapper = Mapper()
+        mapper.train()
+        optimizer = torch.optim.Adam(
+            self.model.parameters(), weight_decay=0.0001)
+        for epoch in range(1000):
+            sum_loss = 0
+            num_embedding = 0
+            for embedding, hps in train_loader:
+                if torch.cuda.is_available():
+                    embedding.cuda()
+                    hps.cuda()
+                preds = mapper(embedding)
+                optimizer.zero_grad()
+                loss0 = 0
+                for i in range(8):
+                    exec(
+                        f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])/8')
+                exec(f'loss{8}.backward()')
+                optimizer.step()
+                sum_loss += eval(f'loss{8}') * len(embedding)
+                num_embedding += len(embedding)
+            sum_loss /= num_embedding
+            print(f"Epoch~{epoch}->loss:{sum_loss}")
+        torch.save(mapper.state_dict(), f"mehp/{self.dataset}_model")
+        return
+
 
 if __name__ == "__main__":
-
+    # trainer = Trainer(MNIST)
+    # sampler = Sampler(trainer.dataset)
+    # loader, _, _, _ = sampler.fetch()
+    # embedding = trainer.embedding_dataset(loader)
+    # torch.save(([embedding, embedding], [[64, 128, 256, 512, 2, 2, 2, 2], [64, 128, 256, 512, 2, 2, 2, 2]]),
+    #            f"mehp/{trainer.dataset}")
+    train_dataset = MehpDataset(MNIST)
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=128, shuffle=True,)
+    mapper = Mapper()
+    mapper.train()
+    for embedding, hps in train_loader:
+        if torch.cuda.is_available():
+            embedding.cuda()
+            hps.cuda()
+        preds = mapper(embedding)
+        loss0 = 0
+        for i in range(8):
+            exec(
+                f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])/8')
+        exec(f'loss{8}.backward()')
+        print(eval(f'loss{8}').item())
     pass

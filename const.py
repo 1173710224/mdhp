@@ -113,7 +113,7 @@ C1 = "c1"
 C2 = "c2"
 C3 = "c3"
 C4 = "c4"
-HPORDER = [C1,C2,C3,C4,B1,B2,B3,B4]
+HPORDER = [C1, C2, C3, C4, B1, B2, B3, B4]
 ITERATIONS = 30
 INF = 100000000000
 BAYES = "bayes"
@@ -124,6 +124,11 @@ PARTICLESO = "pso"
 HYPERBAND = "hyperband"
 EAPOP = 4
 EAITER = 7
+MEHP = "mehp"
+
+EMBEDDINGEPOCH = 100
+INFITER = 50
+INFEPOCH = 10
 
 # mode
 MINI = "mini"

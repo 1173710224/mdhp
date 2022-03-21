@@ -1,9 +1,8 @@
-from zmq import device
 from const import *
 import sklearn.preprocessing as sp
 from sklearn.model_selection import train_test_split
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler, Dataset
 import numpy as np
 import pandas as pd
 import torch
@@ -118,97 +117,6 @@ class Data():
                                  batch_size=BATCHSIZE, shuffle=True)
         return train_loader, test_loader, 3, 32, 10
 
-    def load_wine(self):
-        LabelIndex = 0
-        path = "data/wine/wine.data"
-        df = pd.read_csv(path, header=None)
-        dataset = np.column_stack((df.values[:, 1:],
-                                   sp.LabelEncoder().fit_transform(df[[LabelIndex]].values)))
-        dataset = np.array(dataset, dtype=float)
-        dataset = torch.Tensor(dataset)
-        if torch.cuda.is_available():
-            dataset = dataset.cuda()
-        counter = {0: 0, 1: 0, 2: 0}
-        train_index = []
-        test_index = []
-        for index in range(len(dataset)):
-            item = dataset[index]
-            if counter[int(item[-1])] < 40:
-                counter[int(item[-1])] += 1
-                train_index.append(index)
-            else:
-                test_index.append(index)
-        train_data = dataset.index_select(
-            0, torch.tensor(train_index, device=self.device))
-        test_data = dataset.index_select(
-            0, torch.tensor(test_index, device=self.device))
-        x_train = train_data[:, :-1]
-        y_train = train_data[:, -1]
-        x_test = test_data[:, :-1]
-        y_test = test_data[:, -1]
-        return (x_train, y_train), (x_test, y_test), 13, 3
-
-    def load_car(self):
-        LabelIndex = 6
-        path = "data/car/car.data"
-        df = pd.read_csv(path, header=None)
-        dataset = np.column_stack((sp.OneHotEncoder(sparse=False).fit_transform(df.values[:, :-1]),
-                                   sp.LabelEncoder().fit_transform(df[[LabelIndex]].values)))
-        dataset = np.array(dataset, dtype=float)
-        dataset = torch.Tensor(dataset)
-        if torch.cuda.is_available():
-            dataset = dataset.cuda()
-        # counter = {0: 0, 1: 0, 2: 0, 3: 0}
-        # train_index = []
-        # test_index = []
-        # for index in range(len(dataset)):
-        #     item = dataset[index]
-        #     if counter[int(item[-1])] < 50:
-        #         counter[int(item[-1])] += 1
-        #         train_index.append(index)
-        #     else:
-        #         test_index.append(index)
-        # train_data = dataset.index_select(0, torch.tensor(train_index))
-        # test_data = dataset.index_select(0, torch.tensor(test_index))
-        # x_train = train_data[:, :-1]
-        # y_train = train_data[:, -1]
-        # x_test = test_data[:, :-1]
-        # y_test = test_data[:, -1]
-        x_train, x_test, y_train, y_test = train_test_split(
-            dataset[:, :-1], dataset[:, -1:].reshape(len(dataset)), test_size=0.2, random_state=0)
-        return (x_train, y_train), (x_test, y_test), 21, 4
-
-    def load_iris(self):
-        LabelIndex = 4
-        path = "data/iris/iris.data"
-        df = pd.read_csv(path, header=None)
-        dataset = np.column_stack((df.values[:, :-1],
-                                  sp.LabelEncoder().fit_transform(
-            df[[LabelIndex]].values)))
-        dataset = np.array(dataset, dtype=float)
-        dataset = torch.Tensor(dataset)
-        if torch.cuda.is_available():
-            dataset = dataset.cuda()
-        x_train, x_test, y_train, y_test = train_test_split(
-            dataset[:, :-1], dataset[:, -1:].reshape(len(dataset)), test_size=0.2, random_state=0)
-        return (x_train, y_train), (x_test, y_test), 4, 3
-
-    def load_agaricus_lepiota(self):
-        LabelIndex = 0
-        path = "data/agaricus-lepiota/agaricus-lepiota.data"
-        df = pd.read_csv(path, header=None)
-        dataset = np.column_stack((sp.OneHotEncoder(sparse=False).fit_transform(df.values[:, 1:11]),
-                                   sp.OneHotEncoder(sparse=False).fit_transform(
-                                       df.values[:, 12:]),
-                                   sp.LabelEncoder().fit_transform(df[[LabelIndex]].values)))
-        dataset = np.array(dataset, dtype=float)
-        dataset = torch.Tensor(dataset)
-        if torch.cuda.is_available():
-            dataset = dataset.cuda()
-        x_train, x_test, y_train, y_test = train_test_split(
-            dataset[:, :-1], dataset[:, -1:].reshape(len(dataset)), test_size=0.2, random_state=0)
-        return (x_train, y_train), (x_test, y_test), 112, 2
-
     def get(self, dataset):
         if dataset == MNIST:
             return self.load_mnist()
@@ -218,15 +126,69 @@ class Data():
             return self.load_cifar10()
         if dataset == CIFAR100:
             return self.load_cifar100()
-        if dataset == IRIS:
-            return self.load_iris()
-        if dataset == WINE:
-            return self.load_wine()
-        if dataset == CAR:
-            return self.load_car()
-        if dataset == AGARICUS:
-            return self.load_agaricus_lepiota()
         return None
+
+    def get_data(self, dataset):
+        if dataset == MNIST:
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(28, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(MNISTMEAN, MNISTSTD),
+            ])
+            data_root_path = "data/"
+            train_dataset = datasets.MNIST(root=data_root_path, train=True,
+                                           transform=train_transform, download=True)
+            return train_dataset, 1, 28, 10
+        if dataset == SVHN:
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(SVHNMEAN, SVHNSTD),
+            ])
+            data_root_path = "data/SVHN/"
+            train_dataset = datasets.SVHN(root=data_root_path, split="train",
+                                          transform=train_transform, download=True)
+            return train_dataset, 3, 32, 10
+        if dataset == CIFAR10:
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(CIFAR10MEAN, CIFAR10STD),
+            ])
+            data_root_path = "data/"
+            train_dataset = datasets.CIFAR10(root=data_root_path, train=True,
+                                             transform=train_transform,
+                                             download=True)
+            return train_dataset, 3, 32, 10
+        if dataset == CIFAR100:
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(CIFAR100MEAN, CIFAR100STD),
+            ])
+            data_root_path = "data/"
+            train_dataset = datasets.CIFAR100(root=data_root_path, train=True,
+                                              transform=train_transform, download=True)
+            return train_dataset, 3, 32, 100
+        return None
+
+
+class Sampler(Data):
+    def __init__(self, dataset=MNIST) -> None:
+        super(Sampler, self).__init__()
+        self.dataset = dataset
+        self.data, self.input_channel, self.ndim, self.nclass = self.get_data(
+            dataset)
+        pass
+
+    def fetch(self, size=500):
+        data_loader = DataLoader(dataset=self.data,
+                                 batch_size=NAME2BATCHSIZE[self.dataset], sampler=RandomSampler(self.data, replacement=True, num_samples=size,))
+        return data_loader, self.input_channel, self.ndim, self.nclass
 
 
 def num_image(loader):
@@ -236,16 +198,6 @@ def num_image(loader):
     return res
 
 
-def get_res(dataset, opt):
-    if dataset in LARGE:
-        with open(f"result/big/fmp_{dataset}_{opt}") as f:
-            return pickle.load(f)
-    elif dataset in SMALL:
-        with open(f"result/small/mlp_{dataset}_{opt}") as f:
-            return pickle.load(f)
-    return None
-
-
 def get_scheduler(opt, optimizer):
     if opt in [SGD, MOMENTUM]:
         return torch.optim.lr_scheduler.MultiStepLR(optimizer,
@@ -253,5 +205,33 @@ def get_scheduler(opt, optimizer):
     return None
 
 
+class MehpDataset(Dataset):
+    def __init__(self, dataset=MNIST):
+        super(MehpDataset, self).__init__()
+        data = torch.load(f"mehp/{dataset}")
+        x, y = data
+        x = np.array(x)
+        x = torch.Tensor(x)
+        y = np.array(y)
+        print(y)
+        y = torch.Tensor(y)
+        y -= torch.Tensor([[32, 64, 128, 256, 2, 2, 2, 2]]).repeat(len(y), 1)
+        self.embeddings = x
+        self.labels = y.long()
+        print(y)
+
+    def __getitem__(self, index):
+        return self.embeddings[index], self.labels[index]
+
+    def __len__(self,):
+        return len(self.embeddings)
+
+
 if __name__ == "__main__":
+    sampler = Sampler(CIFAR10)
+    loader, _, _, _ = sampler.fetch()
+    for imgs, label in loader:
+        # print(imgs.size(), label.size())
+        print(label)
+        break
     pass

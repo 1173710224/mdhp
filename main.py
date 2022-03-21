@@ -37,6 +37,33 @@ class CnnExp():
         trainer.hyper_band()
         return
 
+    def generate_sample_for_mehp(self, dataset):
+        trainer = Trainer(dataset)
+        trainer.generate_training_sample()
+        return
+
+    def generate_sample_for_mehp(self, dataset):
+        trainer = Trainer(dataset)
+        trainer.generate_training_sample()
+        return
+
+    def train_mehp(self, dataset):
+        trainer = Trainer(dataset)
+        trainer.train_mapper()
+        return
+
+    def cal_params_for_mehp(self, dataset):
+        trainer = Trainer(dataset)
+        train_embedding = trainer.embedding_dataset(trainer.train_loader)
+        mapper = Mapper()
+        mapper.load_state_dict(torch.load(f'dehp/{dataset}_model'))
+        hps = mapper(torch.Tensor(train_embedding).unsqueeze(0))
+        hps = mapper.generate(hps)
+        hps = hps.squeeze(0)
+        with open(f"hparams/{dataset}_{MEHP}.json", "w") as f:
+            json.dump(list(hps), f)
+        return
+
 
 if __name__ == "__main__":
     exp = CnnExp()

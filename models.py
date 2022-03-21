@@ -1,4 +1,6 @@
-from torch.nn import Conv2d, MaxPool2d, AvgPool2d, Flatten, Linear, PReLU, FractionalMaxPool2d
+from turtle import forward
+from typing import List
+from torch.nn import Conv2d, MaxPool2d, AvgPool2d, Flatten, Linear, PReLU, FractionalMaxPool2d, RNN
 from torch import nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
@@ -143,26 +145,137 @@ class ResNet(nn.Module):
         return
 
 
-def test():
-    net = ResNet(3, 32, 10, hparams=[64, 128, 256, 512, 2, 3, 2, 2])
-    y = net(torch.randn(2, 3, 32, 32))
-    print(y.size())
+class AutoEncoder(nn.Module):
+    def __init__(self, input_channel, ndim):
+        super(AutoEncoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channel, 16, 3, stride=3,
+                      padding=1),  # b, 16, 10, 10
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),  # b, 16, 5, 5
+            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # b, 8, 3, 3
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=1)  # b, 8, 2, 2
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(8, 16, 3, stride=2),  # b, 16, 5, 5
+            nn.ReLU(True),
+            nn.ConvTranspose2d(16, 8, 5, stride=3,
+                               padding=1-int(ndim/32)),  # b, 8, 15, 15
+            nn.ReLU(True),
+            nn.ConvTranspose2d(8, input_channel, 2, stride=2,
+                               padding=1),  # b, 1, 28, 28
+            nn.Tanh()
+        )
+        self.flatten = torch.nn.Flatten()
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
+    def embedding(self, x):
+        x = self.encoder(x)
+        x = self.flatten(x)
+        return x
+
+
+class Mapper(nn.Module):
+    def __init__(self):
+        super(Mapper, self).__init__()
+        self.scale = nn.Sequential(
+            Linear(32, 64),
+            nn.Tanh()
+        )
+        self.rnn = RNN(input_size=64, hidden_size=128, num_layers=1)
+        self.trans1 = nn.Sequential(
+            Linear(128, 64),
+            Linear(64, 32+1),
+        )
+        self.trans2 = nn.Sequential(
+            Linear(128, 64+1),
+        )
+        self.trans3 = nn.Sequential(
+            Linear(128, 128+1),
+        )
+        self.trans4 = nn.Sequential(
+            Linear(128, 256+1),
+        )
+        self.trans5 = nn.Sequential(
+            Linear(128, 64),
+            Linear(64, 32),
+            Linear(32, 2),
+        )
+        self.trans6 = nn.Sequential(
+            Linear(128, 64),
+            Linear(64, 32),
+            Linear(32, 3),
+        )
+        self.trans7 = nn.Sequential(
+            Linear(128, 64),
+            Linear(64, 32),
+            Linear(32, 5),
+        )
+        self.trans8 = nn.Sequential(
+            Linear(128, 64),
+            Linear(64, 32),
+            Linear(32, 2),
+        )
+        return
+
+    def forward(self, x: torch.Tensor):
+        x = self.scale(x)
+        x = x.unsqueeze(0).repeat(8, 1, 1)
+        outputs, _ = self.rnn(x)
+        hps = []
+        for i, output in enumerate(outputs):
+            hps.append(eval(f"self.trans{i+1}")(output))
+        return hps
+
+    def generate(self, hps):
+        res = []
+        res.append(torch.argmax(hps[0], 1).unsqueeze(1) + 32*1)
+        res.append(torch.argmax(hps[1], 1).unsqueeze(1) + 32*2)
+        res.append(torch.argmax(hps[2], 1).unsqueeze(1) + 32*4)
+        res.append(torch.argmax(hps[3], 1).unsqueeze(1) + 32*8)
+        res.append(torch.argmax(hps[4], 1).unsqueeze(1) + 2)
+        res.append(torch.argmax(hps[5], 1).unsqueeze(1) + 2)
+        res.append(torch.argmax(hps[6], 1).unsqueeze(1) + 2)
+        res.append(torch.argmax(hps[7], 1).unsqueeze(1) + 2)
+
+        return torch.cat(res, dim=1).detach().cpu().numpy()
 
 
 if __name__ == "__main__":
-    # # m = nn.FractionalMaxPool2d(3, output_ratio=0.5)
-    # # input = torch.randn(20, 16, 50, 32)
-    # # output = m(input)
-    # # print(output.size())
     # data = Data()
-    # train_loader, test_loader, input_channel, ndim, nclass = data.load_mnist()
-    # # train_loader, test_loader, input_channel, ndim, nclass = data.load_cifar10()
-    # model = Fmp(input_channel, ndim, nclass)
-    # model.cuda()
-    # for imgs, label in train_loader:
-    #     model.train()
-    #     imgs = imgs.cuda()
-    #     preds = model(imgs)
-    #     print(preds.size())
-    test()
+    # # loader, _, input_channel, _, _ = data.load_svhn()
+    # loader, _, input_channel, ndim, _ = data.load_mnist()
+    # # loader, _, input_channel, _, _ = data.load_cifar10()
+    # model = AutoEncoder(input_channel, ndim)
+    # for imgs, label in loader:
+    #     output = model(imgs)
+    #     # print(output.size(), imgs.size())
+    #     # loss = F.mse_loss(output, imgs)
+    #     print(model.embedding(imgs).size())
+    #     break
+
+    # rnn = nn.RNN(input_size=2, hidden_size=3, num_layers=2,
+    #              bias=False, nonlinearity='relu')
+    # input = torch.ones(1, 1, 2)
+    # h0 = torch.zeros(2, 1, 3)
+    # output, hn = rnn(input, h0)
+    # print("x", input.reshape(1, 2))
+    # print("output", output.reshape((1, 3)))
+    # print("output hidden", hn)
+    # for name, param in rnn.named_parameters():
+    #     print(name, param)
+
+    x = torch.rand(10, 32)
+    mapper = Mapper()
+    hps = mapper(x)
+    for hp in hps:
+        print(hp.size())
+    # print(hps[4:])
+    hps = mapper.generate(hps)
+    print(hps)
     pass
