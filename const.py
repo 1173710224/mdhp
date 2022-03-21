@@ -122,6 +122,8 @@ RAND = "rand"
 GENETICA = "ga"
 PARTICLESO = "pso"
 HYPERBAND = "hyperband"
+EAPOP = 4
+EAITER = 7
 MEHP = "mehp"
 
 EMBEDDINGEPOCH = 100

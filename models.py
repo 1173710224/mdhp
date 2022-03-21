@@ -34,7 +34,9 @@ class Hyperband:
     # can be called multiple times
     def run(self, skip_last=0, dry_run=False):
         # num = 0
+        print(reversed(range(self.s_max + 1)))
         for s in reversed(range(self.s_max + 1)):
+            print(s)
 
             # initial number of configurations
             n = int(ceil(self.B / self.max_iter / (s + 1) * self.eta ** s))
@@ -50,7 +52,7 @@ class Hyperband:
                 # Run each of the n configs for <iterations>
                 # and keep best (n_configs / eta) configurations
                 n_configs = n * self.eta ** (-i)
-                n_iterations = r * self.eta ** (i)
+                n_iterations = int(r * self.eta ** (i))
 
                 losses = []
                 for t in T:

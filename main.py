@@ -23,16 +23,16 @@ class CnnExp():
     def cal_hparams(self, dataset=MNIST):
         print(dataset)
         trainer = Trainer(dataset)
-        print("bayes")
-        trainer.bayes()
-        print("zoopt")
-        trainer.zoopt()
-        print("rand")
-        trainer.rand()
-        print("ga")
-        trainer.ga()
-        print("pso")
-        trainer.pso()
+        # print("bayes")
+        # trainer.bayes()
+        # print("zoopt")
+        # trainer.zoopt()
+        # print("rand")
+        # trainer.rand()
+        # print("ga")
+        # trainer.ga()
+        # print("pso")
+        # trainer.pso()
         print("hb")
         trainer.hyper_band()
         return
@@ -62,8 +62,10 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
-    exp.cal_hparams(MNIST)
-    exp.cal_hparams(SVHN)
-    exp.cal_hparams(CIFAR10)
-    exp.cal_hparams(CIFAR100)
+    # # calculate h-parameters of baselines
+    # exp.cal_hparams(MNIST)
+    # exp.cal_hparams(SVHN)
+    # exp.cal_hparams(CIFAR10)
+    # exp.cal_hparams(CIFAR100)
+    exp.generate_sample_for_mehp(MNIST)
     pass

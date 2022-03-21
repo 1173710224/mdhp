@@ -182,7 +182,7 @@ class Trainer():
         best_hparams = None
         best_loss = INF
         st = time.perf_counter()
-        for _ in range():
+        for _ in range(ITERATIONS):
             hparams = [
                 randint(32, 64),
                 randint(64, 128),
@@ -208,7 +208,7 @@ class Trainer():
             hparams = [int(tmp) for tmp in param_values]
             self.reset_model(hparams)
             return self.objective()
-        ga = GA(func=schaffer, n_dim=8, size_pop=10, max_iter=10, prob_mut=0.001,
+        ga = GA(func=schaffer, n_dim=8, size_pop=EAPOP, max_iter=EAITER, prob_mut=0.001,
                 lb=[32, 64, 128, 256, 2, 2, 2, 2],
                 ub=[64+0.99, 128+0.99, 256+0.99, 512+0.99, 3+0.99, 4+0.99, 6+0.99, 3+0.99], precision=1e-7)
         st = time.perf_counter()
@@ -223,11 +223,11 @@ class Trainer():
             hparams = [int(tmp) for tmp in param_values]
             self.reset_model(hparams)
             return self.objective()
-        ga = PSO(func=schaffer, n_dim=8, size_pop=10, max_iter=10, prob_mut=0.001,
-                 lb=[32, 64, 128, 256, 2, 2, 2, 2],
-                 ub=[64+0.99, 128+0.99, 256+0.99, 512+0.99, 3+0.99, 4+0.99, 6+0.99, 3+0.99], precision=1e-7)
+        pso = PSO(func=schaffer, n_dim=8, pop=EAPOP, max_iter=EAITER,
+                  lb=[32, 64, 128, 256, 2, 2, 2, 2],
+                  ub=[64+0.99, 128+0.99, 256+0.99, 512+0.99, 3+0.99, 4+0.99, 6+0.99, 3+0.99], w=0.8, c1=0.5, c2=0.5)
         st = time.perf_counter()
-        best_params, best_loss = ga.run()
+        best_params, best_loss = pso.run()
         with open(f"hparams/{self.dataset}_{PARTICLESO}.json", "w") as f:
             json.dump([int(tmp) for tmp in best_params], f)
         print(f"time: {time.perf_counter() - st}")
@@ -249,7 +249,7 @@ class Trainer():
 
         def try_params_conv(hparams, iter):
             self.reset_model(hparams)
-            loss = self.objective()
+            loss = self.objective(iter)
             result = {}
             result['loss'] = loss
             return result
@@ -273,7 +273,7 @@ class Trainer():
             for data in dataloader:
                 img, _ = data
                 if torch.cuda.is_available():
-                    img.cuda()
+                    img = img.cuda()
                 output = encoder(img)
                 loss = F.mse_loss(output, img)
                 optimizer.zero_grad()
@@ -283,7 +283,7 @@ class Trainer():
         for data in dataloader:
             img, _ = data
             if torch.cuda.is_available():
-                img.cuda()
+                img = img.cuda()
             embeddings.append(encoder.embedding(img))
         embedding = torch.cat(embeddings, dim=0).mean(dim=0)
         return embedding.detach().cpu().numpy()
@@ -328,7 +328,7 @@ class Trainer():
             B4: (2, 3+0.99),
         })
         st = time.perf_counter()
-        optimizer.maximize(init_points=5, n_iter=INFITER)
+        optimizer.maximize(init_points=5, n_iter=INFITER-5)
         print(f"time: {time.perf_counter() - st}")
         return [int(optimizer.max['params'][tmp]) for tmp in HPORDER]
 
@@ -336,13 +336,17 @@ class Trainer():
         x = []
         y = []
         sampler = Sampler(self.dataset)
-        for i in num_sample:
+        for i in range(num_sample):
             loader, _, _, _ = sampler.fetch(dataset_size)
-            embedding = self.embedding_dataset(loader)
+            # embedding = self.embedding_dataset(loader)
+            st = time.perf_counter()
             hparams = self.optimal_hparams(loader)
+            print(time.perf_counter()-st)
+            break
             x.append(embedding)
             y.append(hparams)
-        torch.save((x, y), f"mehp/{self.dataset}")
+            print(f'{i}th->embedding:{embedding},hparams:{hparams}')
+        torch.save((x, y), f"mehp/{self.dataset}_data")
         return
 
     def train_mapper(self,):
