@@ -39,6 +39,7 @@ class CnnExp():
 
     def generate_sample_for_mehp(self, dataset):
         trainer = Trainer(dataset)
+        print(dataset)
         trainer.generate_training_sample()
         return
 
@@ -68,4 +69,7 @@ if __name__ == "__main__":
     # exp.cal_hparams(CIFAR10)
     # exp.cal_hparams(CIFAR100)
     exp.generate_sample_for_mehp(MNIST)
+    exp.generate_sample_for_mehp(SVHN)
+    exp.generate_sample_for_mehp(CIFAR10)
+    exp.generate_sample_for_mehp(CIFAR100)
     pass

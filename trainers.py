@@ -338,11 +338,8 @@ class Trainer():
         sampler = Sampler(self.dataset)
         for i in range(num_sample):
             loader, _, _, _ = sampler.fetch(dataset_size)
-            # embedding = self.embedding_dataset(loader)
-            st = time.perf_counter()
+            embedding = self.embedding_dataset(loader)
             hparams = self.optimal_hparams(loader)
-            print(time.perf_counter()-st)
-            break
             x.append(embedding)
             y.append(hparams)
             print(f'{i}th->embedding:{embedding},hparams:{hparams}')
