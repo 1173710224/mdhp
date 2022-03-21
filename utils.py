@@ -1,4 +1,3 @@
-from zmq import device
 from const import *
 import sklearn.preprocessing as sp
 from sklearn.model_selection import train_test_split
@@ -204,6 +203,28 @@ def get_scheduler(opt, optimizer):
         return torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                     milestones=[MINIBATCHEPOCHS * 0.5, MINIBATCHEPOCHS * 0.75], gamma=0.1)
     return None
+
+
+class MehpDataset(Dataset):
+    def __init__(self, dataset=MNIST):
+        super(MehpDataset, self).__init__()
+        data = torch.load(f"mehp/{dataset}")
+        x, y = data
+        x = np.array(x)
+        x = torch.Tensor(x)
+        y = np.array(y)
+        print(y)
+        y = torch.Tensor(y)
+        y -= torch.Tensor([[32, 64, 128, 256, 2, 2, 2, 2]]).repeat(len(y), 1)
+        self.embeddings = x
+        self.labels = y.long()
+        print(y)
+
+    def __getitem__(self, index):
+        return self.embeddings[index], self.labels[index]
+
+    def __len__(self,):
+        return len(self.embeddings)
 
 
 if __name__ == "__main__":
