@@ -1,5 +1,4 @@
 import json
-from pickletools import optimize
 from models import ResNet, Hyperband, AutoEncoder, Mapper
 from utils import Data, num_image, Sampler, MehpDataset
 from torch.utils.data import DataLoader
@@ -15,6 +14,7 @@ from sko.GA import GA
 from sko.PSO import PSO
 from hyperopt import hp
 from hyperopt.pyll.stochastic import sample
+from sklearn.metrics import precision_recall_fscore_support as metrics
 import numpy as np
 warnings.filterwarnings("ignore")
 
@@ -41,7 +41,7 @@ class Trainer():
 
     def train(self, tag=""):
         self.optimizier = torch.optim.SGD(
-            self.model.parameters(), lr=0.05, momentum=P_MOMENTUM, weight_decay=0.0001)
+            self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
         self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
                                                            milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
         # self.lr_sch = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -69,11 +69,13 @@ class Trainer():
                 loss_sum += loss.item() * len(imgs)
             self.lr_sch.step()
             avg_loss = loss_sum * 1.0/self.num_image
-            losses.append(losses)
+            losses.append(avg_loss)
             print("Epoch~{}->train_loss:{},time:{}s".format(i+1,
                   round(avg_loss, 4), round(time.time() - start, 4)))
+        accu, f1, recall, precision = self.val()
         with open(f"result/{self.dataset}_{tag}.json", "w") as f:
-            json.dump({ACCU: self.val(), TRAINLOSS: losses}, f)
+            json.dump({ACCU: accu, F1SCORE: f1, RECALL: recall,
+                      PRECISION: precision, TRAINLOSS: losses}, f)
         return loss_sum
 
     def val(self):
@@ -91,6 +93,25 @@ class Trainer():
             ncorrect += torch.sum(preds.max(1)[1].eq(label).double())
             nsample += len(label)
         return ncorrect/nsample
+
+    def val(self):
+        self.model.eval()
+        ncorrect = 0
+        nsample = 0
+        preds = []
+        Y = []
+        for imgs, label in self.test_loader:
+            if torch.cuda.is_available():
+                imgs = imgs.cuda()
+                label = label.cuda()
+            tmp_pred = self.model(imgs)
+            tmp = tmp_pred.detach().cpu().numpy()
+            preds.extend([np.argmax(tmp[i]) for i in range(len(tmp))])
+            Y.extend(label.detach().cpu().numpy())
+            ncorrect += torch.sum(tmp_pred.max(1)[1].eq(label).double())
+            nsample += len(label)
+        p, r, f1, _ = metrics(preds, Y)
+        return float((ncorrect/nsample).cpu()), f1, r, p
 
     def reset_model(self, hparams):
         self.model = ResNet(self.input_channel, self.ndim,
