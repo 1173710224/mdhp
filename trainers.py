@@ -64,7 +64,6 @@ class Trainer():
                 loss = F.cross_entropy(preds, label)
                 self.optimizier.zero_grad()
                 loss.backward()
-                print(loss.item())
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
             self.lr_sch.step()
@@ -111,7 +110,7 @@ class Trainer():
             ncorrect += torch.sum(tmp_pred.max(1)[1].eq(label).double())
             nsample += len(label)
         p, r, f1, _ = metrics(preds, Y)
-        return float((ncorrect/nsample).cpu()), f1, r, p
+        return float((ncorrect/nsample).cpu()), list(f1), list(r), list(p)
 
     def reset_model(self, hparams):
         self.model = ResNet(self.input_channel, self.ndim,

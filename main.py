@@ -12,16 +12,18 @@ class CnnExp():
         pass
 
     def debug(self, dataset=MNIST, tag=BAYES):
+        print(dataset, tag)
         trainer = Trainer(dataset)
         if tag == "resnet18":
             trainer.train("resnet18")
         if tag == "resnet34":
             trainer.reset_model([64, 128, 256, 512, 3, 4, 6, 3])
             trainer.train("resnet34")
-        with open(f"result/{dataset}_{tag}.json", "w") as f:
-            hparams = json.load(f)
-        trainer.reset_model(hparams)
-        trainer.train(tag)
+        else:
+            with open(f"hparams/{dataset}_{tag}.json", "r") as f:
+                hparams = json.load(f)
+            trainer.reset_model(hparams)
+            trainer.train(tag)
         return
 
     def cal_hparams(self, dataset=MNIST):
@@ -78,13 +80,13 @@ if __name__ == "__main__":
     # exp.generate_sample_for_mehp(CIFAR10)
     # exp.generate_sample_for_mehp(CIFAR100)
     # formal running
-    dataset = MNIST
-    exp.debug(dataset, BAYES)
-    exp.debug(dataset, GENETICA)
-    exp.debug(dataset, HYPERBAND)
-    exp.debug(dataset, PARTICLESO)
-    exp.debug(dataset, RAND)
-    exp.debug(dataset, ZOOPT)
-    exp.debug(dataset, "resnet18")
-    exp.debug(dataset, "resnet34")
+    for dataset in [MNIST, SVHN, CIFAR10, CIFAR100]:
+        exp.debug(dataset, BAYES)
+        exp.debug(dataset, GENETICA)
+        exp.debug(dataset, HYPERBAND)
+        exp.debug(dataset, PARTICLESO)
+        exp.debug(dataset, RAND)
+        exp.debug(dataset, ZOOPT)
+        exp.debug(dataset, "resnet18")
+        exp.debug(dataset, "resnet34")
     pass
