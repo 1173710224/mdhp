@@ -4,41 +4,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 from scipy.interpolate import make_interp_spline
+import json
 
 
 class Parser():
-    def __init__(self, model, dataset) -> None:
+    def __init__(self, dataset) -> None:
         self.dataset = dataset
-        self.model = model
-        path = self.get_default_path()
-        with open(path, "rb") as f:
-            self.data = pickle.load(f)
         pass
 
-    def read(self):
-        return self.data
+    def read_data(self, model):
+        with open(f'result/{self.dataset}_{model}.json', 'r') as f:
+            data = json.load(f)
+        return data
 
-    def reset(self, model, dataset):
-        self.dataset = dataset
-        self.model = model
-        return
+    def get_loss(self, model=BAYES):
+        data = self.read_data(model)
+        return data[TRAINLOSS]
 
-    def get_default_path(self):
-        if self.dataset in BIG:
-            son_dir = "big"
-        elif self.dataset in SMALL:
-            son_dir = "small"
-        path = "result/{}/{}-{}".format(son_dir, self.model, self.dataset)
-        return path
+    def get_metrics(self, model=BAYES):
+        data = self.read_data(model)
+        return model + " {} & {}$\sim${} & {}$\sim${} & {}$\sim${} \\\\".format(
+            '%.2f' % (data[ACCU] * 100),
+            '%.2f' % (min(data[F1SCORE]) *
+                      100), '%.2f' % (max(data[F1SCORE]) * 100),
+            '%.2f' % (min(data[RECALL]) *
+                      100), '%.2f' % (max(data[RECALL]) * 100),
+            '%.2f' % (min(data[PRECISION]) * 100), '%.2f' % (max(data[PRECISION]) * 100))
 
 
 if __name__ == "__main__":
-    # parser = Parser(SGD, IRIS)
-    parser = Parser(ADAM, WINE)
-    print(parser.data["loss"][:100])
-    # for item in parser.data:
-    #     print(type(item), len(item))
-    #     print(parser.data[item])
-    #     # print(item)
-    #     break
+    models = ['resnet18', 'resnet34', BAYES, ZOOPT, RAND, GENETICA, PARTICLESO, HYPERBAND,
+              # MEHP
+              ]
+    parser = Parser(MNIST)
+    for model in models:
+        print(parser.get_metrics(model))
     pass
