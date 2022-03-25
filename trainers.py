@@ -1,6 +1,6 @@
 import json
-from pickletools import optimize
 from models import ResNet, Hyperband, AutoEncoder, Mapper
+from DEHB.dehb import DEHB
 from utils import Data, num_image, Sampler, MehpDataset
 from torch.utils.data import DataLoader
 import torch
@@ -15,6 +15,7 @@ from sko.GA import GA
 from sko.PSO import PSO
 from hyperopt import hp
 from hyperopt.pyll.stochastic import sample
+from sklearn.metrics import precision_recall_fscore_support as metrics
 import numpy as np
 warnings.filterwarnings("ignore")
 
@@ -41,9 +42,9 @@ class Trainer():
 
     def train(self, tag=""):
         self.optimizier = torch.optim.SGD(
-            self.model.parameters(), lr=0.05, momentum=P_MOMENTUM, weight_decay=0.0005)
-        # self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
-        #    milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
+            self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
+        self.lr_sch = torch.optim.lr_scheduler.MultiStepLR(self.optimizier,
+                                                           milestones=[self.epoch * 0.5, self.epoch * 0.75], gamma=0.1)
         # self.lr_sch = torch.optim.lr_scheduler.CosineAnnealingLR(
         #     self.optimizier, T_max=200)
         # self.optimizier = torch.optim.Adam(
@@ -64,33 +65,37 @@ class Trainer():
                 loss = F.cross_entropy(preds, label)
                 self.optimizier.zero_grad()
                 loss.backward()
-                print(loss.item())
                 self.optimizier.step()
                 loss_sum += loss.item() * len(imgs)
-            # self.lr_sch.step()
+            self.lr_sch.step()
             avg_loss = loss_sum * 1.0/self.num_image
-            losses.append(losses)
+            losses.append(avg_loss)
             print("Epoch~{}->train_loss:{},time:{}s".format(i+1,
                   round(avg_loss, 4), round(time.time() - start, 4)))
+        accu, f1, recall, precision = self.val()
         with open(f"result/{self.dataset}_{tag}.json", "w") as f:
-            json.dump({ACCU: self.val(), TRAINLOSS: losses}, f)
+            json.dump({ACCU: accu, F1SCORE: f1, RECALL: recall,
+                      PRECISION: precision, TRAINLOSS: losses}, f)
         return loss_sum
 
     def val(self):
+        self.model.eval()
         ncorrect = 0
         nsample = 0
+        preds = []
+        Y = []
         for imgs, label in self.test_loader:
             if torch.cuda.is_available():
                 imgs = imgs.cuda()
                 label = label.cuda()
-            else:
-                imgs = imgs.cpu()
-                label = label.cpu()
-            self.model.eval()
-            preds = self.model(imgs)
-            ncorrect += torch.sum(preds.max(1)[1].eq(label).double())
+            tmp_pred = self.model(imgs)
+            tmp = tmp_pred.detach().cpu().numpy()
+            preds.extend([np.argmax(tmp[i]) for i in range(len(tmp))])
+            Y.extend(label.detach().cpu().numpy())
+            ncorrect += torch.sum(tmp_pred.max(1)[1].eq(label).double())
             nsample += len(label)
-        return ncorrect/nsample
+        p, r, f1, _ = metrics(preds, Y)
+        return float((ncorrect/nsample).cpu()), list(f1), list(r), list(p)
 
     def reset_model(self, hparams):
         self.model = ResNet(self.input_channel, self.ndim,
@@ -262,6 +267,78 @@ class Trainer():
             json.dump(best_hparams, f)
         print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
+
+    def dehb(self):
+        def transform_space(param_space, configuration):
+            assert len(configuration) == len(param_space)
+            res = []
+            for i, (k, v) in enumerate(param_space.items()):
+                value = configuration[i]
+                lower, upper = v[0], v[1]
+                is_log = v[3]
+                if is_log:
+                    # performs linear scaling in the log-space
+                    log_range = np.log(upper) - np.log(lower)
+                    value = np.exp(np.log(lower) + log_range * value)
+                else:
+                    # linear scaling within the range of the parameter
+                    value = lower + (upper - lower) * value
+                if v[2] == int:
+                    value = int(value)
+                res.append(value)
+            return res
+
+        def target_function(config, budget, **kwargs):
+            max_budget = kwargs["max_budget"]
+            if budget is None:
+                budget = max_budget
+            config = transform_space(param_space, config)
+            self.reset_model(config)
+            st = time.perf_counter()
+            loss = self.objective()
+            cost = time.perf_counter() - st
+            result = {
+                "fitness": loss,  # DE/DEHB minimizes
+                "cost": cost,
+                "info": {
+                    "test_score": loss,
+                    "budget": budget
+                }
+            }
+            return result
+
+        param_space = {
+            C1: [32, 64, int, False],
+            C2: [64, 128, int, False],
+            C3: [128, 256, int, False],
+            C4: [256, 512, int, False],
+            B1: [2, 3, int, False],
+            B2: [2, 4, int, False],
+            B3: [2, 6, int, False],
+            B4: [2, 3, int, False],
+        }
+        # Declaring the fidelity range
+        min_budget, max_budget = 2, 18
+        st = time.perf_counter()
+        dehb = DEHB(
+            f=target_function,
+            dimensions=len(param_space),
+            min_budget=min_budget,
+            max_budget=max_budget,
+            n_workers=1,
+            output_path="./dehb_out"
+        )
+        trajectory, runtime, history = dehb.run(
+            fevals=ITERATIONS,
+            verbose=False,
+            save_intermediate=False,
+            max_budget=dehb.max_budget,
+            param_space=param_space
+        )
+        with open(f"hparams/{self.dataset}_{DEHBCONST}.json", "w") as f:
+            json.dump(transform_space(param_space, dehb.inc_config), f)
+        print(f"time: {time.perf_counter() - st}")
+        return time.perf_counter()-st, transform_space(param_space, dehb.inc_config), dehb.inc_score
 
     def embedding_dataset(self, dataloader):
         encoder = AutoEncoder(self.input_channel, self.ndim)
