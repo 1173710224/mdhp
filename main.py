@@ -16,7 +16,7 @@ class CnnExp():
         trainer = Trainer(dataset)
         if tag == "resnet18":
             trainer.train("resnet18")
-        if tag == "resnet34":
+        elif tag == "resnet34":
             trainer.reset_model([64, 128, 256, 512, 3, 4, 6, 3])
             trainer.train("resnet34")
         else:
@@ -80,7 +80,8 @@ if __name__ == "__main__":
     # exp.generate_sample_for_mehp(CIFAR10)
     # exp.generate_sample_for_mehp(CIFAR100)
     # formal running
-    for dataset in [MNIST, SVHN, CIFAR10, CIFAR100]:
+    exp.debug(MNIST, "resnet34")
+    for dataset in [SVHN, CIFAR10, CIFAR100]:
         exp.debug(dataset, BAYES)
         exp.debug(dataset, GENETICA)
         exp.debug(dataset, HYPERBAND)
