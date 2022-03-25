@@ -122,6 +122,7 @@ RAND = "rand"
 GENETICA = "ga"
 PARTICLESO = "pso"
 HYPERBAND = "hyperband"
+DEHBCONST = "dehb"
 EAPOP = 4
 EAITER = 7
 MEHP = "mehp"
