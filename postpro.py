@@ -36,7 +36,7 @@ if __name__ == "__main__":
     models = ['resnet18', 'resnet34', BAYES, ZOOPT, RAND, GENETICA, PARTICLESO, HYPERBAND,
               # MEHP
               ]
-    parser = Parser(MNIST)
+    parser = Parser(SVHN)
     for model in models:
         print(parser.get_metrics(model))
     pass

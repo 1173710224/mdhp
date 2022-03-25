@@ -1,5 +1,6 @@
 import json
 from models import ResNet, Hyperband, AutoEncoder, Mapper
+from DEHB.dehb.optimizers.dehb import DEHB
 from utils import Data, num_image, Sampler, MehpDataset
 from torch.utils.data import DataLoader
 import torch
@@ -76,22 +77,6 @@ class Trainer():
             json.dump({ACCU: accu, F1SCORE: f1, RECALL: recall,
                       PRECISION: precision, TRAINLOSS: losses}, f)
         return loss_sum
-
-    def val(self):
-        ncorrect = 0
-        nsample = 0
-        for imgs, label in self.test_loader:
-            if torch.cuda.is_available():
-                imgs = imgs.cuda()
-                label = label.cuda()
-            else:
-                imgs = imgs.cpu()
-                label = label.cpu()
-            self.model.eval()
-            preds = self.model(imgs)
-            ncorrect += torch.sum(preds.max(1)[1].eq(label).double())
-            nsample += len(label)
-        return ncorrect/nsample
 
     def val(self):
         self.model.eval()
@@ -282,6 +267,55 @@ class Trainer():
             json.dump(best_hparams, f)
         print(f"time: {time.perf_counter() - st}")
         return time.perf_counter() - st, best_hparams, best_loss
+
+    def dehb(self):
+        def target_function(config, budget, **kwargs):
+            max_budget = kwargs["max_budget"]
+            if budget is None:
+                budget = max_budget
+            self.reset_model(config)
+            st = time.perf_counter()
+            loss = self.objective()
+            cost = time.perf_counter() - st
+            result = {
+                "fitness": loss,  # DE/DEHB minimizes
+                "cost": cost,
+                "info": {
+                    "test_score": loss,
+                    "budget": budget
+                }
+            }
+            return result
+
+        param_space = {
+            C1: [32, 64, int, False],
+            C2: [64, 128, int, False],
+            C3: [128, 256, int, False],
+            C4: [256, 512, int, False],
+            B1: [2, 3, int, False],
+            B2: [2, 4, int, False],
+            B3: [2, 6, int, False],
+            B4: [2, 3, int, False],
+        }
+        # Declaring the fidelity range
+        min_budget, max_budget = 2, 50
+        st = time.perf_counter()
+        dehb = DEHB(
+            f=target_function,
+            dimensions=len(param_space),
+            min_budget=min_budget,
+            max_budget=max_budget,
+            n_workers=1,
+            output_path="./dehp_out"
+        )
+        trajectory, runtime, history = dehb.run(
+            fevals=ITERATIONS,
+            verbose=False,
+            save_intermediate=False,
+            max_budget=dehb.max_budget,
+            param_space=param_space
+        )
+        return time.perf_counter()-st, dehb.inc_config, dehb.inc_score
 
     def embedding_dataset(self, dataloader):
         encoder = AutoEncoder(self.input_channel, self.ndim)
