@@ -71,30 +71,26 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
+    # train mapper
+    exp.train_mehp(MNIST)
     # calculate h-parameters of baselines
-    exp.cal_hparams(MNIST)
-    exp.cal_hparams(SVHN)
-    exp.cal_hparams(CIFAR10)
-    exp.cal_hparams(CIFAR100)
+    # exp.cal_hparams(MNIST)
+    # exp.cal_hparams(SVHN)
+    # exp.cal_hparams(CIFAR10)
+    # exp.cal_hparams(CIFAR100)
     # # make data
     # exp.generate_sample_for_mehp(MNIST)
     # exp.generate_sample_for_mehp(SVHN)
     # exp.generate_sample_for_mehp(CIFAR10)
     # exp.generate_sample_for_mehp(CIFAR100)
-<< << << < HEAD
-# x, y = torch.load("mehp/MNIST_data")
-# print(x)
-# print(y)
-== == == =
-# # formal running
-# for dataset in [MNIST, SVHN, CIFAR10, CIFAR100]:
-#     exp.debug(dataset, BAYES)
-#     exp.debug(dataset, GENETICA)
-#     exp.debug(dataset, HYPERBAND)
-#     exp.debug(dataset, PARTICLESO)
-#     exp.debug(dataset, RAND)
-#     exp.debug(dataset, ZOOPT)
-#     exp.debug(dataset, "resnet18")
-#     exp.debug(dataset, "resnet34")
->>>>>> > 5f3cfaebcb12cfab6767b23b3e7c31208852cd1f
+    # # formal running
+    # for dataset in [MNIST, SVHN, CIFAR10, CIFAR100]:
+    #     exp.debug(dataset, BAYES)
+    #     exp.debug(dataset, GENETICA)
+    #     exp.debug(dataset, HYPERBAND)
+    #     exp.debug(dataset, PARTICLESO)
+    #     exp.debug(dataset, RAND)
+    #     exp.debug(dataset, ZOOPT)
+    #     exp.debug(dataset, "resnet18")
+    #     exp.debug(dataset, "resnet34")
 pass

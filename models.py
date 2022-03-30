@@ -186,8 +186,9 @@ class Mapper(nn.Module):
         self.scale = nn.Sequential(
             Linear(32, 64),
             nn.Tanh()
+            Linear(64,128)
         )
-        self.rnn = RNN(input_size=64, hidden_size=128, num_layers=1)
+        self.rnn = RNN(input_size=128, hidden_size=128, num_layers=1)
         self.trans1 = nn.Sequential(
             Linear(128, 64),
             Linear(64, 32+1),

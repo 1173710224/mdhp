@@ -1,6 +1,6 @@
 import json
 from models import ResNet, Hyperband, AutoEncoder, Mapper
-from DEHB.dehb import DEHB
+# from DEHB.dehb import DEHB
 from utils import Data, num_image, Sampler, MehpDataset
 from torch.utils.data import DataLoader
 import torch
@@ -443,7 +443,7 @@ class Trainer():
                 loss0 = 0
                 for i in range(8):
                     exec(
-                        f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])/8')
+                        f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])')
                 exec(f'loss{8}.backward()')
                 optimizer.step()
                 sum_loss += eval(f'loss{8}') * len(embedding)
