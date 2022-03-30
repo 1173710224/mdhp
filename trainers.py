@@ -347,7 +347,6 @@ class Trainer():
         optimizer = torch.optim.Adam(encoder.parameters(), weight_decay=1e-5)
         encoder.train()
         for i in range(EMBEDDINGEPOCH):
-            st = time.time()
             for data in dataloader:
                 img, _ = data
                 if torch.cuda.is_available():
@@ -357,7 +356,6 @@ class Trainer():
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-            print(f'{i}-th epoch, {time.time() - st}')
         embeddings = []
         for data in dataloader:
             img, _ = data

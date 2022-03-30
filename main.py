@@ -77,9 +77,9 @@ if __name__ == "__main__":
     exp = CnnExp()
     # calculate h-parameters for mdhp
     exp.cal_params_for_mehp(MNIST)
-    exp.cal_params_for_mehp(SVHN)
-    exp.cal_params_for_mehp(CIFAR10)
-    exp.cal_params_for_mehp(CIFAR100)
+    # exp.cal_params_for_mehp(SVHN)
+    # exp.cal_params_for_mehp(CIFAR10)
+    # exp.cal_params_for_mehp(CIFAR100)
     # train mapper
     # exp.train_mehp(MNIST)
     # exp.train_mehp(SVHN)
