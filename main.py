@@ -63,14 +63,14 @@ class CnnExp():
         train_embedding = trainer.embedding_dataset(trainer.train_loader)
         mapper = Mapper()
         mapper.load_state_dict(torch.load(f'mehp/{dataset}_model'))
-        if torch.cuda.is_available():
-            mapper.cuda()
-        print(train_embedding.device, mapper.device)
-        # hps = mapper(torch.Tensor(train_embedding).unsqueeze(0))
-        # hps = mapper.generate(hps)
-        # hps = hps.squeeze(0)
-        # print(time.time() - st)
-        # print(hps)
+        # if torch.cuda.is_available():
+        #     mapper.cuda()
+        # print(train_embedding.device, mapper.device)
+        hps = mapper(torch.Tensor(train_embedding).unsqueeze(0))
+        hps = mapper.generate(hps)
+        hps = hps.squeeze(0)
+        print(time.time() - st)
+        print(hps)
         return
 
 
