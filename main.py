@@ -73,17 +73,22 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
-    # calculate h-parameters for mdhp
-    exp.cal_params_for_mehp(MNIST)
-    exp.cal_params_for_mehp(SVHN)
-    exp.cal_params_for_mehp(CIFAR10)
-    exp.cal_params_for_mehp(CIFAR100)
-    # train mapper
+    # formal run for mdhp
+    exp.debug(MNIST, MEHP)
+    exp.debug(SVHN, MEHP)
+    exp.debug(CIFAR10, MEHP)
+    exp.debug(CIFAR100, MEHP)
+    # # calculate h-parameters for mdhp
+    # exp.cal_params_for_mehp(MNIST)
+    # exp.cal_params_for_mehp(SVHN)
+    # exp.cal_params_for_mehp(CIFAR10)
+    # exp.cal_params_for_mehp(CIFAR100)
+    # # train mapper
     # exp.train_mehp(MNIST)
     # exp.train_mehp(SVHN)
     # exp.train_mehp(CIFAR10)
     # exp.train_mehp(CIFAR100)
-    # calculate h-parameters of baselines
+    # # calculate h-parameters of baselines
     # exp.cal_hparams(MNIST)
     # exp.cal_hparams(SVHN)
     # exp.cal_hparams(CIFAR10)
