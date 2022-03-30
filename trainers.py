@@ -346,7 +346,8 @@ class Trainer():
             encoder.cuda()
         optimizer = torch.optim.Adam(encoder.parameters(), weight_decay=1e-5)
         encoder.train()
-        for _ in range(EMBEDDINGEPOCH):
+        for i in range(EMBEDDINGEPOCH):
+            st = time.time()
             for data in dataloader:
                 img, _ = data
                 if torch.cuda.is_available():
@@ -356,6 +357,7 @@ class Trainer():
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+            print(f'{i}-th epoch, {time.time() - st}')
         embeddings = []
         for data in dataloader:
             img, _ = data
@@ -429,8 +431,8 @@ class Trainer():
             dataset=train_dataset, batch_size=128, shuffle=True,)
         mapper = Mapper()
         mapper.train()
-        optimizer = torch.optim.Adam(
-            self.model.parameters(), weight_decay=0.0001)
+        # optimizer = torch.optim.SGD(mapper.parameters(), lr=0.1)
+        optimizer = torch.optim.Adam(mapper.parameters(), weight_decay=0.0001)
         for epoch in range(1000):
             sum_loss = 0
             num_embedding = 0
@@ -443,7 +445,7 @@ class Trainer():
                 loss0 = 0
                 for i in range(8):
                     exec(
-                        f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])')
+                        f'loss{i+1} = loss{i} + F.cross_entropy(preds[{i}], hps[:,{i}])/8')
                 exec(f'loss{8}.backward()')
                 optimizer.step()
                 sum_loss += eval(f'loss{8}') * len(embedding)

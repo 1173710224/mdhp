@@ -57,22 +57,34 @@ class CnnExp():
         return
 
     def cal_params_for_mehp(self, dataset):
+        print(dataset)
         trainer = Trainer(dataset)
+        st = time.time()
         train_embedding = trainer.embedding_dataset(trainer.train_loader)
         mapper = Mapper()
-        mapper.load_state_dict(torch.load(f'dehp/{dataset}_model'))
+        mapper.load_state_dict(torch.load(f'mehp/{dataset}_model'))
+        if torch.cuda.is_available():
+            mapper.cuda()
         hps = mapper(torch.Tensor(train_embedding).unsqueeze(0))
         hps = mapper.generate(hps)
         hps = hps.squeeze(0)
-        with open(f"hparams/{dataset}_{MEHP}.json", "w") as f:
-            json.dump(list(hps), f)
+        print(time.time() - st)
+        print(hps)
         return
 
 
 if __name__ == "__main__":
     exp = CnnExp()
+    # calculate h-parameters for mdhp
+    exp.cal_params_for_mehp(MNIST)
+    exp.cal_params_for_mehp(SVHN)
+    exp.cal_params_for_mehp(CIFAR10)
+    exp.cal_params_for_mehp(CIFAR100)
     # train mapper
-    exp.train_mehp(MNIST)
+    # exp.train_mehp(MNIST)
+    # exp.train_mehp(SVHN)
+    # exp.train_mehp(CIFAR10)
+    # exp.train_mehp(CIFAR100)
     # calculate h-parameters of baselines
     # exp.cal_hparams(MNIST)
     # exp.cal_hparams(SVHN)

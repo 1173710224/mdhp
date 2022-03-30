@@ -213,8 +213,9 @@ class MehpDataset(Dataset):
         x = np.array(x)
         x = torch.Tensor(x)
         y = np.array(y)
-        # print(y)
         y = torch.Tensor(y)
+        # print(x)
+        # print(y)
         y -= torch.Tensor([[32, 64, 128, 256, 2, 2, 2, 2]]).repeat(len(y), 1)
         self.embeddings = x
         self.labels = y.long()
