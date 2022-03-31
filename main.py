@@ -95,13 +95,13 @@ if __name__ == "__main__":
     # exp.generate_sample_for_mehp(MNIST)
     # exp.generate_sample_for_mehp(SVHN)
     # exp.generate_sample_for_mehp(CIFAR10)
-    # exp.generate_sample_for_mehp(CIFAR100)
+    exp.generate_sample_for_mehp(CIFAR100)
 
     # # calculate h-parameters of baselines
     # exp.cal_hparams(MNIST)
     # exp.cal_hparams(SVHN)
     # exp.cal_hparams(CIFAR10)
-    exp.cal_hparams(CIFAR100)
+    # exp.cal_hparams(CIFAR100)
 
     # # formal running
     # exp.debug(MNIST, "resnet34")
