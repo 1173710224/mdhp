@@ -108,7 +108,7 @@ class Trainer():
             self.device = "cpu"
         return
 
-    def objective(self, iter=10):
+    def objective(self, iter=40):
         self.optimizier = torch.optim.SGD(
             self.model.parameters(), lr=0.1, momentum=P_MOMENTUM, weight_decay=0.0001)
         self.model.train()
@@ -258,7 +258,7 @@ class Trainer():
             result = {}
             result['loss'] = loss
             return result
-        hb = Hyperband(get_params_conv, try_params_conv, it_n=9)
+        hb = Hyperband(get_params_conv, try_params_conv, it_n=27)
         st = time.perf_counter()
         results = hb.run()
         best_loss = results["best_loss"]

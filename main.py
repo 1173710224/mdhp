@@ -29,18 +29,18 @@ class CnnExp():
     def cal_hparams(self, dataset=MNIST):
         print(dataset)
         trainer = Trainer(dataset)
-        # print("bayes")
-        # trainer.bayes()
-        # print("zoopt")
-        # trainer.zoopt()
-        # print("rand")
-        # trainer.rand()
-        # print("ga")
-        # trainer.ga()
-        # print("pso")
-        # trainer.pso()
-        # print("hb")
-        # trainer.hyper_band()
+        print("bayes")
+        trainer.bayes()
+        print("zoopt")
+        trainer.zoopt()
+        print("rand")
+        trainer.rand()
+        print("ga")
+        trainer.ga()
+        print("pso")
+        trainer.pso()
+        print("hb")
+        trainer.hyper_band()
         print("dehb")
         trainer.dehb()
         return
@@ -90,17 +90,18 @@ if __name__ == "__main__":
     # exp.train_mehp(SVHN)
     # exp.train_mehp(CIFAR10)
     # exp.train_mehp(CIFAR100)
-    # # calculate h-parameters of baselines
-    # exp.cal_hparams(MNIST)
-    # exp.cal_hparams(SVHN)
-    # exp.cal_hparams(CIFAR10)
-    # exp.cal_hparams(CIFAR100)
 
     # make data
     # exp.generate_sample_for_mehp(MNIST)
     # exp.generate_sample_for_mehp(SVHN)
     # exp.generate_sample_for_mehp(CIFAR10)
-    exp.generate_sample_for_mehp(CIFAR100)
+    # exp.generate_sample_for_mehp(CIFAR100)
+
+    # # calculate h-parameters of baselines
+    # exp.cal_hparams(MNIST)
+    # exp.cal_hparams(SVHN)
+    # exp.cal_hparams(CIFAR10)
+    exp.cal_hparams(CIFAR100)
 
     # # formal running
     # exp.debug(MNIST, "resnet34")
