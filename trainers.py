@@ -1,6 +1,6 @@
 import json
 from models import ResNet, Hyperband, AutoEncoder, Mapper
-# from DEHB.dehb import DEHB
+from DEHB.dehb import DEHB
 from utils import Data, num_image, Sampler, MehpDataset
 from torch.utils.data import DataLoader
 import torch

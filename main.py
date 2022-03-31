@@ -73,16 +73,18 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
-    # formal run for mdhp
-    exp.debug(MNIST, MEHP)
-    exp.debug(SVHN, MEHP)
-    exp.debug(CIFAR10, MEHP)
-    exp.debug(CIFAR100, MEHP)
+    # # formal run for mdhp
+    # exp.debug(MNIST, MEHP)
+    # exp.debug(SVHN, MEHP)
+    # exp.debug(CIFAR10, MEHP)
+    # exp.debug(CIFAR100, MEHP)
+
     # # calculate h-parameters for mdhp
     # exp.cal_params_for_mehp(MNIST)
     # exp.cal_params_for_mehp(SVHN)
     # exp.cal_params_for_mehp(CIFAR10)
     # exp.cal_params_for_mehp(CIFAR100)
+
     # # train mapper
     # exp.train_mehp(MNIST)
     # exp.train_mehp(SVHN)
@@ -93,20 +95,23 @@ if __name__ == "__main__":
     # exp.cal_hparams(SVHN)
     # exp.cal_hparams(CIFAR10)
     # exp.cal_hparams(CIFAR100)
-    # # make data
+
+    # make data
     # exp.generate_sample_for_mehp(MNIST)
     # exp.generate_sample_for_mehp(SVHN)
     # exp.generate_sample_for_mehp(CIFAR10)
-    # exp.generate_sample_for_mehp(CIFAR100)
+    exp.generate_sample_for_mehp(CIFAR100)
+
     # # formal running
     # exp.debug(MNIST, "resnet34")
-    # for dataset in [SVHN, CIFAR10, CIFAR100]:
+    # for dataset in [CIFAR100]:
     #     exp.debug(dataset, BAYES)
     #     exp.debug(dataset, GENETICA)
     #     exp.debug(dataset, HYPERBAND)
     #     exp.debug(dataset, PARTICLESO)
     #     exp.debug(dataset, RAND)
     #     exp.debug(dataset, ZOOPT)
-    #     exp.debug(dataset, "resnet18")
-    #     exp.debug(dataset, "resnet34")
+    #     exp.debug(dataset, DEHBCONST)
+    #     # exp.debug(dataset, "resnet18")
+    #     # exp.debug(dataset, "resnet34")
 pass
