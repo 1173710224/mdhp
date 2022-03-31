@@ -129,7 +129,7 @@ MEHP = "mehp"
 
 EMBEDDINGEPOCH = 100
 INFITER = 30
-INFEPOCH = 10
+INFEPOCH = 50
 
 # mode
 MINI = "mini"

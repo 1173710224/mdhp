@@ -33,10 +33,10 @@ class Parser():
 
 
 if __name__ == "__main__":
-    models = ['resnet18', 'resnet34', BAYES, ZOOPT, RAND, GENETICA, PARTICLESO, HYPERBAND,
+    models = ['resnet18', BAYES, ZOOPT, RAND, GENETICA, PARTICLESO, HYPERBAND,
               # MEHP
               ]
-    parser = Parser(SVHN)
+    parser = Parser(CIFAR100)
     for model in models:
         print(parser.get_metrics(model))
     pass

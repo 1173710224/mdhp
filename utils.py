@@ -208,17 +208,18 @@ def get_scheduler(opt, optimizer):
 class MehpDataset(Dataset):
     def __init__(self, dataset=MNIST):
         super(MehpDataset, self).__init__()
-        data = torch.load(f"mehp/{dataset}")
+        data = torch.load(f"mehp/{dataset}_data")
         x, y = data
         x = np.array(x)
         x = torch.Tensor(x)
         y = np.array(y)
-        print(y)
         y = torch.Tensor(y)
+        # print(x)
+        # print(y)
         y -= torch.Tensor([[32, 64, 128, 256, 2, 2, 2, 2]]).repeat(len(y), 1)
         self.embeddings = x
         self.labels = y.long()
-        print(y)
+        # print(y)
 
     def __getitem__(self, index):
         return self.embeddings[index], self.labels[index]
@@ -228,10 +229,11 @@ class MehpDataset(Dataset):
 
 
 if __name__ == "__main__":
-    sampler = Sampler(CIFAR10)
-    loader, _, _, _ = sampler.fetch()
-    for imgs, label in loader:
-        # print(imgs.size(), label.size())
-        print(label)
-        break
+    # sampler = Sampler(CIFAR10)
+    # loader, _, _, _ = sampler.fetch()
+    # for imgs, label in loader:
+    #     # print(imgs.size(), label.size())
+    #     print(label)
+    #     break
+    dataset = MehpDataset(MNIST)
     pass
