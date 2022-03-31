@@ -384,7 +384,7 @@ class Trainer():
                     optimizer.step()
                     loss_sum += loss.item() * len(imgs)
                 ret = loss_sum
-                if (i + 1) % 5 == 0:
+                if i % 24 == 0:
                     print(f"Epoch~{i + 1}->loss:{ret}.")
             return ret
 
@@ -403,7 +403,7 @@ class Trainer():
             B2: (2, 4+0.99),
             B3: (2, 6+0.99),
             B4: (2, 3+0.99),
-        })
+        }, verbose=1)
         st = time.perf_counter()
         optimizer.maximize(init_points=5, n_iter=INFITER-5)
         print(f"time: {time.perf_counter() - st}")
