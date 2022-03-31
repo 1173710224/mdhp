@@ -71,18 +71,18 @@ class CnnExp():
 
 if __name__ == "__main__":
     exp = CnnExp()
-    # calculate h-parameters of baselines
-    exp.cal_hparams(MNIST)
-    exp.cal_hparams(SVHN)
-    exp.cal_hparams(CIFAR10)
-    exp.cal_hparams(CIFAR100)
+    # # calculate h-parameters of baselines
+    # exp.cal_hparams(MNIST)
+    # exp.cal_hparams(SVHN)
+    # exp.cal_hparams(CIFAR10)
+    # exp.cal_hparams(CIFAR100)
     # # make data
     # exp.generate_sample_for_mehp(MNIST)
     # exp.generate_sample_for_mehp(SVHN)
     # exp.generate_sample_for_mehp(CIFAR10)
     # exp.generate_sample_for_mehp(CIFAR100)
-    # # formal running
-    # exp.debug(MNIST, "resnet34")
+    # formal running
+    exp.debug(CIFAR100, "resnet18")
     # for dataset in [SVHN, CIFAR10, CIFAR100]:
     #     exp.debug(dataset, BAYES)
     #     exp.debug(dataset, GENETICA)
